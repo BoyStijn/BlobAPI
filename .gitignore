@@ -1,0 +1,14 @@
+apache-maven-3.6.0
+BuildData
+BuildTools.jar
+Bukkit
+CraftBukkit
+pom.xml
+spigot-1.18.jar
+Spigot
+src/test
+target
+work
+.classpath
+.project
+.settings

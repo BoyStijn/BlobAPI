@@ -1,0 +1,5 @@
+name: BlobAPI
+version: '1.0.0'
+main: blob.blobapi.BlobAPI
+load: STARTUP
+api-version: 1.18
