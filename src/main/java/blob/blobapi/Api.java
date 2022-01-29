@@ -1,5 +1,7 @@
 package blob.blobapi;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -27,6 +29,7 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.Damageable;
 import org.bukkit.inventory.meta.ItemMeta;
 
+import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.Sets;
@@ -38,6 +41,10 @@ import net.minecraft.advancements.Advancement;
 import net.minecraft.advancements.AdvancementProgress;
 import net.minecraft.advancements.Advancements;
 import net.minecraft.core.IRegistry;
+import net.minecraft.core.IRegistryCustom;
+import net.minecraft.core.IRegistryWritable;
+import net.minecraft.nbt.NBTCompressedStreamTools;
+import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.resources.MinecraftKey;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.AdvancementDataPlayer;
@@ -61,14 +68,26 @@ import net.minecraft.world.level.levelgen.WorldGenStage.Decoration;
 import net.minecraft.world.level.levelgen.feature.StructureFeature;
 import net.minecraft.world.level.levelgen.feature.StructureGenerator;
 import net.minecraft.world.level.levelgen.feature.configurations.StructureSettingsFeature;
-import net.minecraft.world.level.levelgen.feature.configurations.WorldGenFeatureEmptyConfiguration;
+import net.minecraft.world.level.levelgen.feature.configurations.WorldGenFeatureVillageConfiguration;
+import net.minecraft.world.level.levelgen.feature.structures.WorldGenFeatureDefinedStructurePoolTemplate;
 import net.minecraft.world.level.storage.loot.LootTable;
 import net.minecraft.world.level.storage.loot.LootTableRegistry;
+import net.minecraft.world.level.levelgen.structure.templatesystem.DefinedStructure;
+import net.minecraft.world.level.levelgen.structure.templatesystem.DefinedStructureManager;
+
 
 public class Api {
 
 	//world gen
-	public void registerStructure(NamespacedKey key,StructureGenerator<WorldGenFeatureEmptyConfiguration> structure,WorldGenFeatureEmptyConfiguration config, Decoration decorationtype, World world, List<ResourceKey<BiomeBase>> biomes, StructureSettingsFeature settings) {
+	
+	public WorldGenFeatureDefinedStructurePoolTemplate registerJigSawPool(WorldGenFeatureDefinedStructurePoolTemplate var0) {
+		MinecraftServer serv = ((CraftServer)Bukkit.getServer()).getServer();
+		IRegistryCustom irc = serv.aV();
+		IRegistry<WorldGenFeatureDefinedStructurePoolTemplate> irw = irc.d(IRegistry.aQ);
+		return IRegistry.a(irw, var0.b(), var0);
+	}
+	
+	public void registerStructure(NamespacedKey key,StructureGenerator<WorldGenFeatureVillageConfiguration> structure,WorldGenFeatureVillageConfiguration config, Decoration decorationtype, World world, List<ResourceKey<BiomeBase>> biomes, StructureSettingsFeature settings) {
 		try {
 			ChunkGenerator c = ((CraftWorld)world).getHandle().k().g();
 			StructureSettings set = c.d();
@@ -77,7 +96,7 @@ public class Api {
 			eField.setAccessible(true);
 			
 			//structure boime override
-			StructureFeature<?, ? extends StructureGenerator<?>> configed = new StructureFeature<WorldGenFeatureEmptyConfiguration, StructureGenerator<WorldGenFeatureEmptyConfiguration>>(structure, config);
+			StructureFeature<?, ? extends StructureGenerator<?>> configed = new StructureFeature<WorldGenFeatureVillageConfiguration, StructureGenerator<WorldGenFeatureVillageConfiguration>>(structure, config);
 			
 			HashMap<StructureGenerator<?>, ImmutableMultimap.Builder<StructureFeature<?, ?>, ResourceKey<BiomeBase>>> arg2 = new HashMap<>();
 			registerBiomes(arg2, configed, biomes);
@@ -319,5 +338,20 @@ public class Api {
 		 } catch (Exception exc) {exc.printStackTrace();}
 	}
 	
-	
+	public Optional<DefinedStructure> GetStructure(InputStream var2, DefinedStructureManager var5) {
+	        Optional<DefinedStructure> optional;
+			try {
+				optional = Optional.of(strucfromstream(var2, var5));
+				var2.close();
+				return optional;
+			} catch (IOException e) {
+				e.printStackTrace();
+				return Optional.absent();
+			}
+	  }
+	  
+	  private DefinedStructure strucfromstream(InputStream var0, DefinedStructureManager var2) throws IOException {
+	    NBTTagCompound var1 = NBTCompressedStreamTools.a(var0);
+	    return var2.a(var1);
+	  }
 }
