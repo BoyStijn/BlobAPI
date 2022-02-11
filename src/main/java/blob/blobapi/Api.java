@@ -14,6 +14,8 @@ import java.util.Random;
 import java.util.Map.Entry;
 import java.util.logging.Level;
 
+import javax.annotation.Nullable;
+
 import org.bukkit.Bukkit;
 import org.bukkit.NamespacedKey;
 import org.bukkit.World;
@@ -42,7 +44,6 @@ import net.minecraft.advancements.AdvancementProgress;
 import net.minecraft.advancements.Advancements;
 import net.minecraft.core.IRegistry;
 import net.minecraft.core.IRegistryCustom;
-import net.minecraft.core.IRegistryWritable;
 import net.minecraft.nbt.NBTCompressedStreamTools;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.resources.MinecraftKey;
@@ -147,16 +148,20 @@ public class Api {
 		LootTableRegistry lt = serv.aG();
 		
 		try {
-			Field mapField = LootTableRegistry.class.getDeclaredField("lootTableToKey");
+			Field mapField = LootTableRegistry.class.getDeclaredField("c");
 			mapField.setAccessible(true);
 			
 			ImmutableMap.Builder<MinecraftKey, LootTable> builder = ImmutableMap.builder();
+			ImmutableMap.Builder<LootTable, MinecraftKey> builder2 = ImmutableMap.builder();
 			MinecraftKey mk = new MinecraftKey(key.toString());
 			
 			builder.put(mk, table);
+			builder2.put(table, mk);
 			builder.putAll((Map<? extends MinecraftKey, ? extends LootTable>) mapField.get(lt));
+			builder2.putAll((Map<? extends LootTable, ? extends MinecraftKey>) lt.lootTableToKey);
 			
 			mapField.set(lt, builder.build());
+			lt.lootTableToKey = builder2.build();
 			
 		} catch (NoSuchFieldException | SecurityException | IllegalArgumentException | IllegalAccessException e) {
 			e.printStackTrace();
@@ -166,20 +171,17 @@ public class Api {
 	}
 	
 	//custom advancements
-	public void addAdvancement(NamespacedKey key, Advancement.SerializedAdvancement a) {
+	public Advancement addAdvancement(NamespacedKey key, Advancement.SerializedAdvancement a) {
 		MinecraftServer serv = ((CraftServer)Bukkit.getServer()).getServer();		
 		Advancements al = serv.ax().c;
 		HashMap<MinecraftKey, Advancement.SerializedAdvancement> map = new HashMap<MinecraftKey, Advancement.SerializedAdvancement>();
-		map.put(new MinecraftKey(key.toString()), a);
+		MinecraftKey mck = new MinecraftKey(key.toString());
+		map.put(mck, a);
 		
 		al.a(map);
-	}
-	
-	public void addAdvancements(NamespacedKey key, HashMap<MinecraftKey, Advancement.SerializedAdvancement> map) {
-		MinecraftServer serv = ((CraftServer)Bukkit.getServer()).getServer();		
-		Advancements al = serv.ax().c;
-		al.a(map);
-	}
+		BlobAPI.Instance.getLogger().log(Level.INFO, "added advancement: " + key.toString());
+		return al.a(mck);
+		}
 	
 	public Advancement getAdvancement(NamespacedKey key) {
 		MinecraftServer serv = ((CraftServer)Bukkit.getServer()).getServer();		
@@ -298,8 +300,8 @@ public class Api {
 		return new CraftEnchantment(e);
 	}
 	
-	public EntityCreature getNSMEntity(LivingEntity e) {
-		return (EntityCreature) ((EntityInsentient)((CraftEntity)e).getHandle());
+	public EntityLiving getNSMEntity(LivingEntity e) {
+		return (EntityLiving) ((CraftEntity)e).getHandle();
 	}
 	
 	public void overrideGoals(LivingEntity e, Map<PathfinderGoal, Integer> goals, Map<PathfinderGoal, Integer> targets) {
@@ -319,7 +321,7 @@ public class Api {
 	}
 	
 	public void addAttributes(LivingEntity e, AttributeBase b, double value) {
-		EntityCreature c = (EntityCreature) ((EntityInsentient)((CraftEntity)e).getHandle());
+		EntityLiving c = ((EntityLiving)((CraftEntity)e).getHandle());
 		try {
 			 Field bQField = EntityLiving.class.getDeclaredField("bQ");
 	    	 bQField.setAccessible(true);
